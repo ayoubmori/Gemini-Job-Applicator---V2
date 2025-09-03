@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Gemini Job Applicator{% endblock %}</title>
+    <title>{% block title %}Mission Control{% endblock %}</title>
+    <!-- This is the link to your stylesheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- NEW: This line fixes the favicon.ico 404 error -->
+    <link rel="icon" href="{{ url_for('static', filename='logo.png') }}" type="image/png">
 </head>
 <body>
     <div class="container">
         <aside class="sidebar">
-            <h1>🚀 Gemini Job Applicator</h1>
+            <h1>🚀 Mission Control</h1>
             <nav>
                 <a href="{{ url_for('main.dashboard') }}" class="{{ 'active' if request.endpoint == 'main.dashboard' else '' }}">Dashboard</a>
                 <a href="{{ url_for('main.settings') }}" class="{{ 'active' if request.endpoint == 'main.settings' else '' }}">Settings</a>

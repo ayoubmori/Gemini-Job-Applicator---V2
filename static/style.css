@@ -183,3 +183,185 @@ textarea {
     color: #fca5a5;
     border: 1px solid var(--error);
 }
+
+
+/* --- Add this to the end of your style.css file --- */
+
+/* 5. Analytics Section */
+.analytics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+/* 6. Modal (Pop-up) Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: none; /* Hidden by default */
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: var(--bg-dark);
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    width: 90%;
+    max-width: 600px;
+    position: relative;
+}
+
+.modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.modal-body {
+    white-space: pre-wrap; /* Respect newlines in the description */
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+/* 7. In-Table Actions */
+td .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+td .select-status {
+    background-color: var(--bg-light);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 6px;
+    padding: 0.25rem;
+}
+
+
+/* --- Add this to the end of style.css --- */
+
+/* This targets the container holding the two header buttons */
+.page-header .header-buttons {
+    display: flex;
+    gap: 1rem;
+    align-items: stretch; /* This makes the items fill the container's height */
+}
+
+/* Ensure the form inside the container doesn't add extra margins */
+.page-header .header-buttons form {
+    margin: 0;
+    display: flex;
+}
+
+/* Make both the link and the button inside the form grow to the same size */
+.page-header .header-buttons .btn {
+    height: 100%;
+}
+
+
+/* 8. Chart Container Sizing */
+.chart-container {
+    position: relative;
+    height: 300px; /* Set a fixed height for the container */
+    width: 100%;
+}
+
+
+
+/* --- Add this to the end of style.css --- */
+
+/* 9. Chart Filter Buttons */
+.chart-filters {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    justify-content: flex-end;
+}
+
+.chart-filters .btn-filter {
+    background-color: var(--bg-light);
+    color: var(--text-secondary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.chart-filters .btn-filter.active {
+    background-color: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+}
+
+
+
+/* --- Add this to the end of style.css --- */
+
+/* 10. Enhanced Modal Content Styling */
+
+/* Style for the main info section (Type, Recipient, etc.) */
+.modal-body .info-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.5rem 1rem;
+    margin-bottom: 1.5rem;
+}
+.modal-body .info-grid p {
+    margin: 0;
+}
+.modal-body .info-grid strong {
+    color: var(--text-secondary);
+}
+
+/* Style for the AI-generated headings (like "Profil recherché") */
+.modal-body h4 {
+    color: var(--accent-color);
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+/* Style for the AI-generated paragraphs */
+.modal-body p {
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+/* Style for the AI-generated lists */
+.modal-body ul {
+    list-style: none;
+    padding-left: 0.5rem;
+}
+
+.modal-body li {
+    margin-bottom: 0.6rem;
+    padding-left: 1.5rem;
+    position: relative;
+}
+
+/* Create a custom, modern bullet point for list items */
+.modal-body li::before {
+    content: '›'; /* A nice chevron character */
+    position: absolute;
+    left: 0;
+    color: var(--accent-color);
+    font-weight: bold;
+    font-size: 1.5rem;
+    line-height: 1;
+}

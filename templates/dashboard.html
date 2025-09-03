@@ -1,27 +1,46 @@
 {% extends 'base.html' %}
 {% block title %}Dashboard{% endblock %}
+
 {% block content %}
 <div class="page-header">
     <h2>Job Application Dashboard</h2>
-    <div style="display: flex; gap: 1rem;">
+    <div class="header-buttons">
         <a href="{{ url_for('main.add_job') }}" class="btn btn-secondary">Add New Job</a>
-        <form action="{{ url_for('main.run_apply') }}" method="post" style="margin: 0;">
+        <form action="{{ url_for('main.run_apply') }}" method="post">
             <button type="submit" class="btn">Run Applicator</button>
         </form>
     </div>
 </div>
 
+<!-- Analytics Section -->
+<div class="analytics-grid">
+    <div class="card">
+        <h3>Status Breakdown</h3>
+        <div class="chart-container">
+            <canvas id="statusChart"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>Applications</h3>
+            <!-- NEW: Filter Buttons -->
+            <div class="chart-filters">
+                <button class="btn-filter" data-period="D">Days</button>
+                <button class="btn-filter active" data-period="W">Weeks</button>
+                <button class="btn-filter" data-period="M">Months</button>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="weeklyChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Main Job Table in a Card -->
 <div class="card">
     <table>
         <thead>
-            <tr>
-                <th>ID</th>
-                <th>Type</th>
-                <th>Description</th>
-                <th>Recipient</th>
-                <th>Status</th>
-                <th>Date Added</th>
-            </tr>
+            <tr><th>ID</th><th>Type</th><th>Description</th><th>Recipient</th><th>Status</th><th>Actions</th></tr>
         </thead>
         <tbody>
             {% for job in jobs %}
@@ -30,15 +49,121 @@
                 <td>{{ job.job_type }}</td>
                 <td>{{ job.description[:60] }}...</td>
                 <td>{{ job.recipient_email }}</td>
-                <td>{{ job.status }}</td>
-                <td>{{ job.date_added.strftime('%Y-%m-%d') }}</td>
+                <td>
+                    <select class="select-status" data-job-id="{{ job.id }}">
+                        <option value="Pending" {% if job.status == 'Pending' %}selected{% endif %}>Pending</option>
+                        <option value="Applied" {% if job.status == 'Applied' %}selected{% endif %}>Applied</option>
+                        <option value="Interviewing" {% if job.status == 'Interviewing' %}selected{% endif %}>Interviewing</option>
+                        <option value="Rejected" {% if job.status == 'Rejected' %}selected{% endif %}>Rejected</option>
+                        {% if 'Error' in job.status %}<option value="{{ job.status }}" selected>{{ job.status }}</option>{% endif %}
+                    </select>
+                </td>
+                <td><button class="btn btn-sm btn-secondary view-btn" data-job-id="{{ job.id }}">View</button></td>
             </tr>
             {% else %}
-            <tr>
-                <td colspan="6" style="text-align: center; padding: 2rem;">No jobs found. Add one to get started!</td>
-            </tr>
+            <tr><td colspan="6" style="text-align: center; padding: 2rem;">No jobs found. Add one to get started!</td></tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+
+<!-- Modal Structure -->
+<div class="modal-overlay" id="jobModal">
+    <div class="modal-content">
+        <button class="modal-close" id="closeModal">&times;</button>
+        <h2 id="modalTitle">Job Details</h2>
+        <div id="modalBody" class="modal-body"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- NEW: Global variables for our charts so we can destroy and redraw them ---
+        let statusChart, weeklyChart;
+
+        function drawEmptyChartMessage(canvasId, message) {
+            const canvas = document.getElementById(canvasId);
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#B0B0B0';
+                ctx.font = "16px 'Inter', sans-serif";
+                ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+            }
+        }
+
+        // --- NEW: The main function to fetch data and update charts ---
+        async function updateCharts(period = 'W') {
+            const response = await fetch(`/api/analytics?period=${period}`);
+            const analyticsData = await response.json();
+
+            // Destroy old charts if they exist
+            if (statusChart) statusChart.destroy();
+            if (weeklyChart) weeklyChart.destroy();
+
+            // --- Draw Status Breakdown Chart ---
+            const statusCtx = document.getElementById('statusChart');
+            if (statusCtx && analyticsData.status_counts && Object.keys(analyticsData.status_counts).length > 0) {
+                statusChart = new Chart(statusCtx.getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(analyticsData.status_counts), datasets: [{ data: Object.values(analyticsData.status_counts), backgroundColor: ['#3b82f6', '#22c55e', '#f97316', '#ef4444', '#8b5cf6'], borderColor: '#1E1E1E', borderWidth: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { color: '#EAEAEA' } } } } });
+            } else {
+                drawEmptyChartMessage('statusChart', 'No status data to display.');
+            }
+
+            // --- Draw Applications Chart ---
+            const weeklyCtx = document.getElementById('weeklyChart');
+            if (weeklyCtx && analyticsData.weekly_counts && Object.keys(analyticsData.weekly_counts).length > 0) {
+                weeklyChart = new Chart(weeklyCtx.getContext('2d'), { type: 'bar', data: { labels: Object.keys(analyticsData.weekly_counts), datasets: [{ label: 'Applications', data: Object.values(analyticsData.weekly_counts), backgroundColor: '#3b82f6' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1, color: '#B0B0B0' } }, x: { ticks: { color: '#B0B0B0' } } } } });
+            } else {
+                drawEmptyChartMessage('weeklyChart', 'Not enough data for a trend.');
+            }
+        }
+
+        // --- Event Listeners ---
+        // 1. Initial chart draw on page load
+        updateCharts();
+
+        // 2. Status dropdown change listener
+        document.querySelectorAll('.select-status').forEach(select => {
+            select.addEventListener('change', async (e) => {
+                const jobId = e.target.dataset.jobId;
+                const newStatus = e.target.value;
+                await fetch(`/update_status/${jobId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
+                // After updating the status, fetch new data and redraw charts
+                updateCharts(document.querySelector('.btn-filter.active').dataset.period);
+            });
+        });
+
+        // 3. Filter button click listeners
+        document.querySelectorAll('.btn-filter').forEach(button => {
+            button.addEventListener('click', (e) => {
+                // Remove active class from all filters
+                document.querySelectorAll('.btn-filter').forEach(btn => btn.classList.remove('active'));
+                // Add active class to the clicked button
+                e.target.classList.add('active');
+                // Redraw charts with the new period
+                updateCharts(e.target.dataset.period);
+            });
+        });
+
+        // Modal Logic (remains the same)
+        const modal = document.getElementById('jobModal');
+        const closeModalBtn = document.getElementById('closeModal');
+        if (modal && closeModalBtn) {
+            document.querySelectorAll('.view-btn').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    const jobId = e.target.dataset.jobId;
+                    const response = await fetch(`/job/${jobId}`);
+                    const data = await response.json();
+                    document.getElementById('modalTitle').textContent = `Details for Job #${data.id}`;
+                    document.getElementById('modalBody').innerHTML = `<p><strong>Type:</strong> ${data.job_type}</p><p><strong>Recipient:</strong> ${data.recipient_email}</p><p><strong>Status:</strong> ${data.status}</p><p><strong>Date Added:</strong> ${data.date_added}</p><hr style="border-color: #3E3E3E;"><p><strong>Full Description:</strong></p><p style="white-space: pre-wrap;">${data.description}</p>`;
+                    modal.style.display = 'flex';
+                });
+            });
+            closeModalBtn.addEventListener('click', () => modal.style.display = 'none');
+            modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+        }
+    });
+</script>
 {% endblock %}
