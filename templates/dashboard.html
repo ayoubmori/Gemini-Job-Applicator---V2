@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Job Application Dashboard</h2>
+    <div style="display: flex; gap: 1rem;">
+        <a href="{{ url_for('main.add_job') }}" class="btn btn-secondary">Add New Job</a>
+        <form action="{{ url_for('main.run_apply') }}" method="post" style="margin: 0;">
+            <button type="submit" class="btn">Run Applicator</button>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Type</th>
+                <th>Description</th>
+                <th>Recipient</th>
+                <th>Status</th>
+                <th>Date Added</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for job in jobs %}
+            <tr>
+                <td>{{ job.id }}</td>
+                <td>{{ job.job_type }}</td>
+                <td>{{ job.description[:60] }}...</td>
+                <td>{{ job.recipient_email }}</td>
+                <td>{{ job.status }}</td>
+                <td>{{ job.date_added.strftime('%Y-%m-%d') }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 2rem;">No jobs found. Add one to get started!</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
