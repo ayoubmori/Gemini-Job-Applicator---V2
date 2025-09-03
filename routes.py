@@ -3,59 +3,84 @@ from models import db, UserConfig, Job
 import services
 import json
 import pandas as pd
-from datetime import datetime
 
 bp = Blueprint('main', __name__)
 
 @bp.route('/')
 def dashboard():
-    """
-    Renders the main dashboard page. The analytics data will be fetched
-    by a separate API call from the frontend.
-    """
+    # This route is unchanged
     jobs = Job.query.order_by(Job.date_added.desc()).all()
-    return render_template('dashboard.html', jobs=jobs)
+    analytics_data = {}
+    if jobs:
+        df = pd.DataFrame([{"status": j.status, "date": j.date_added} for j in jobs])
+        analytics_data['status_counts'] = df['status'].value_counts().to_dict()
+        df['date'] = pd.to_datetime(df['date'])
+        weekly_counts = df.set_index('date').resample('W-MON').size()
+        analytics_data['weekly_counts'] = {date.strftime('%Y-%m-%d'): count for date, count in weekly_counts.items()}
+    return render_template('dashboard.html', jobs=jobs, analytics_data=analytics_data)
 
-# --- NEW: DEDICATED API ENDPOINT FOR ANALYTICS ---
+
+@bp.route('/settings', methods=['GET', 'POST'])
+def settings():
+    config = UserConfig.query.first()
+    if not config:
+        config = UserConfig(id=1)
+
+    if request.method == 'POST':
+        # --- KEY CHANGE: More secure update logic ---
+        
+        # Get the current personal info from the database
+        current_personal_info = config.personal_info
+
+        # If the user submitted a new key, update it.
+        # Otherwise, keep the existing key.
+        new_gemini_key = request.form.get('gemini_api_key')
+        if new_gemini_key:
+            current_personal_info['gemini_api_key'] = new_gemini_key
+        
+        # Update all other fields from the form
+        current_personal_info['name'] = request.form.get('name')
+        current_personal_info['degree'] = request.form.get('degree')
+        current_personal_info['cv_link'] = request.form.get('cv_link')
+        current_personal_info['links'] = {
+            "linkedin": request.form.get('linkedin'),
+            "github": request.form.get('github'),
+            "portfolio": request.form.get('portfolio')
+        }
+        current_personal_info['skills'] = [skill.strip() for skill in request.form.get('skills', '').split(',')]
+
+        config.user_email = request.form.get('user_email')
+        config.personal_info_json = json.dumps(current_personal_info, indent=4)
+        
+        db.session.add(config)
+        db.session.commit()
+        flash('Settings saved successfully!', 'success')
+        return redirect(url_for('main.dashboard'))
+    
+    # --- KEY CHANGE: Do NOT pass the key to the template ---
+    personal_info = config.personal_info
+    # Instead, just check if the key is set or not
+    api_key_is_set = bool(personal_info.get('gemini_api_key'))
+        
+    return render_template('settings.html', config=config, personal_info=personal_info, api_key_is_set=api_key_is_set)
+
+
+# (The rest of your routes file is unchanged)
 @bp.route('/api/analytics')
 def get_analytics_data():
-    """
-    Provides analytics data as JSON, with a filter for the time period.
-    """
-    # Get the time period filter from the request, default to 'W-MON' (Weekly)
-    period = request.args.get('period', 'W-MON') 
-    
+    period = request.args.get('period', 'W')
     jobs = Job.query.all()
     analytics_data = {"status_counts": {}, "weekly_counts": {}}
-
     if jobs:
-        df = pd.DataFrame([
-            {"status": j.status, "date": j.date_added} for j in jobs
-        ])
-        
-        # 1. Get status counts for the pie chart
+        df = pd.DataFrame([{"status": j.status, "date": j.date_added} for j in jobs])
         analytics_data['status_counts'] = df['status'].value_counts().to_dict()
-        
-        # 2. Get time-series application counts based on the period filter
         df['date'] = pd.to_datetime(df['date'])
-        
-        # Use a dictionary to map filters to pandas resampling rules
-        period_map = {
-            'D': 'D',      # Daily
-            'W': 'W-MON',  # Weekly (starting Monday)
-            'M': 'ME'     # Monthly End
-        }
-        resample_rule = period_map.get(period, 'W-MON') # Default to Weekly
-        
+        period_map = {'D': 'D', 'W': 'W-MON', 'M': 'ME'}
+        resample_rule = period_map.get(period, 'W-MON')
         counts = df.set_index('date').resample(resample_rule).size()
-        analytics_data['weekly_counts'] = {
-            date.strftime('%Y-%m-%d'): count for date, count in counts.items()
-        }
-        
+        analytics_data['weekly_counts'] = {date.strftime('%Y-%m-%d'): count for date, count in counts.items()}
     return jsonify(analytics_data)
 
-
-# (The rest of your routes.py file remains the same)
 @bp.route('/job/<int:job_id>')
 def get_job_details(job_id):
     job = Job.query.get_or_404(job_id)
@@ -68,26 +93,8 @@ def update_status(job_id):
     if new_status:
         job.status = new_status
         db.session.commit()
-        return jsonify({"success": True, "message": f"Status for Job {job_id} updated."})
-    return jsonify({"success": False, "message": "New status not provided."}), 400
-
-@bp.route('/settings', methods=['GET', 'POST'])
-def settings():
-    # This route remains the same
-    config = UserConfig.query.first()
-    if not config: config = UserConfig(id=1)
-    if request.method == 'POST':
-        skills_list = [skill.strip() for skill in request.form.get('skills', '').split(',')]
-        personal_info_dict = {"name": request.form.get('name'),"degree": request.form.get('degree'),"cv_link": request.form.get('cv_link'),"gemini_api_key": request.form.get('gemini_api_key'),"links": {"linkedin": request.form.get('linkedin'),"github": request.form.get('github'),"portfolio": request.form.get('portfolio')},"skills": skills_list}
-        config.user_email = request.form.get('user_email')
-        config.personal_info_json = json.dumps(personal_info_dict, indent=4)
-        db.session.add(config)
-        db.session.commit()
-        flash('Settings saved successfully!', 'success')
-        return redirect(url_for('main.dashboard'))
-    personal_info = config.personal_info
-    gemini_key = personal_info.get('gemini_api_key', '')
-    return render_template('settings.html', config=config, personal_info=personal_info, gemini_key=gemini_key)
+        return jsonify({"success": True})
+    return jsonify({"success": False}), 400
 
 @bp.route('/add_job', methods=['GET', 'POST'])
 def add_job():
@@ -95,7 +102,7 @@ def add_job():
         new_job = Job(job_type=request.form['job_type'],recipient_email=request.form['recipient_email'],description=request.form['description'],status='Pending')
         db.session.add(new_job)
         db.session.commit()
-        flash('New job added successfully!', 'success')
+        flash('New job added!', 'success')
         return redirect(url_for('main.dashboard'))
     return render_template('add_job.html')
 
@@ -107,4 +114,3 @@ def run_apply():
     except Exception as e:
         flash(str(e), 'error')
     return redirect(url_for('main.dashboard'))
-

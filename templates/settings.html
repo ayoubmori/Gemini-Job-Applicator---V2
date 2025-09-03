@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}Settings{% endblock %}
+
 {% block content %}
 <div class="page-header">
     <h2>Settings</h2>
@@ -8,18 +9,15 @@
 <div class="card">
     <p style="color: var(--text-secondary); margin-bottom: 2rem;">Configure your personal information and API keys.</p>
     <form method="post">
-        <label for="user_email">Your Email (for sending applications)</label>
-        <input type="email" id="user_email" name="user_email" value="{{ config.user_email or '' }}" required>
-        
         <label for="name">Full Name</label>
         <input type="text" id="name" name="name" value="{{ personal_info.name or '' }}" required>
+
+        <label for="user_email">Your Email (for sending applications)</label>
+        <input type="email" id="user_email" name="user_email" value="{{ config.user_email or '' }}" required>
 
         <label for="degree">Degree / Qualification</label>
         <input type="text" id="degree" name="degree" value="{{ personal_info.degree or '' }}" required>
         
-        <label for="gemini_api_key">Gemini API Key</label>
-        <input type="password" id="gemini_api_key" name="gemini_api_key" value="{{ gemini_key or '' }}" required>
-    
         <label for="cv_link">Google Drive CV Link</label>
         <input type="url" id="cv_link" name="cv_link" value="{{ personal_info.cv_link or '' }}" required>
         
@@ -28,12 +26,22 @@
         
         <label for="github">GitHub URL</label>
         <input type="url" id="github" name="github" value="{{ personal_info.get('links', {}).github or '' }}">
-
+        
         <label for="portfolio">Portfolio URL</label>
         <input type="url" id="portfolio" name="portfolio" value="{{ personal_info.get('links', {}).portfolio or '' }}">
-
+        
         <label for="skills">Your Skills (comma-separated)</label>
         <textarea id="skills" name="skills" required>{{ personal_info.get('skills', []) | join(', ') }}</textarea>
+
+
+        <label for="gemini_api_key">Gemini API Key</label>
+        {% if api_key_is_set %}
+            <input type="text" value="•••••••••••••••••••• Key is already set" disabled>
+            <small style="color: var(--text-secondary); margin-top: -1rem; display: block; margin-bottom: 1rem;">Leave the field below empty to keep the existing key.</small>
+            <input type="password" id="gemini_api_key" name="gemini_api_key" placeholder="Enter a new key to update">
+        {% else %}
+            <input type="password" id="gemini_api_key" name="gemini_api_key" placeholder="Enter your Gemini API key" required>
+        {% endif %}
         
         <button type="submit" class="btn">Save Settings</button>
     </form>
