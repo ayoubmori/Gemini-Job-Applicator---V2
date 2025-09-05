@@ -18,19 +18,14 @@ os.makedirs(instance_path, exist_ok=True) # Create the folder if it doesn't exis
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(instance_path, 'database.db')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# --- Database and Blueprint Initialization ---
-# Initialize the database with the Flask app.
+# Database and Blueprint Initialization ---
 db.init_app(app)
-# Register the routes defined in routes.py to make them accessible.
 app.register_blueprint(bp)
 
-# --- Create Database Tables ---
-# This context block ensures that the database tables are created based on
-# your models.py file if they don't already exist.
+# Create Database Tables if they don't already exist.
 with app.app_context():
     db.create_all()
 
 # --- Run the Application ---
-# This block runs the Flask development server when you execute 'python app.py'.
 if __name__ == '__main__':
     app.run(debug=True)

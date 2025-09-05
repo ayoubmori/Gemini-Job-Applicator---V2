@@ -10,7 +10,6 @@ from googleapiclient.discovery import build
 import os
 from models import db, UserConfig, Job
 
-# ... (_get_gmail_service function remains the same) ...
 def _get_gmail_service():
     SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
     creds = None
